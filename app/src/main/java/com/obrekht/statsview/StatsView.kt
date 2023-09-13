@@ -1,5 +1,6 @@
 package com.obrekht.statsview
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -8,6 +9,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.View
+import android.view.animation.DecelerateInterpolator
 import androidx.core.content.withStyledAttributes
 import kotlin.math.abs
 import kotlin.math.min
@@ -32,6 +34,9 @@ class StatsView @JvmOverloads constructor(
     private var fontSize = 40.dp(context).toFloat()
     private var colors = emptyList<Int>()
     private var progressBackgroundColor: Int = context.getColor(R.color.progress_background)
+
+    private var progress = 0F
+    private var valueAnimator: ValueAnimator? = null
 
     init {
         context.withStyledAttributes(attrs, R.styleable.StatsView) {
@@ -63,7 +68,7 @@ class StatsView @JvmOverloads constructor(
     var data: List<Float> = emptyList()
         set(value) {
             field = value
-            invalidate()
+            update()
         }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -80,7 +85,7 @@ class StatsView @JvmOverloads constructor(
             return
         }
 
-        val dataSum = data.sumOf { abs(it).toInt() }
+        val dataSum = data.sumOf { abs(it).toDouble() }
         var startFrom = START_ANGLE
         var overlapIndex = -1
         var overlapAngle = startFrom
@@ -89,7 +94,7 @@ class StatsView @JvmOverloads constructor(
         canvas.drawCircle(center.x, center.y, radius, paint)
 
         data.forEachIndexed { index, datum ->
-            val angle = 360F * abs(datum) / dataSum
+            val angle = 360F * abs(datum) / dataSum.toFloat()
 
             if (datum > 0F) {
                 if (overlapIndex < 0) {
@@ -97,17 +102,17 @@ class StatsView @JvmOverloads constructor(
                     overlapAngle = startFrom
                 }
                 paint.color = colors.getOrNull(index) ?: getRandomColor()
-                canvas.drawArc(oval, startFrom, angle, false, paint)
+                canvas.drawArc(oval, startFrom + 360F * progress, angle * progress, false, paint)
             }
             startFrom += angle
         }
 
         if (overlapIndex >= 0) {
             paint.color = colors.getOrNull(overlapIndex) ?: getRandomColor()
-            canvas.drawArc(oval, overlapAngle, 1F, false, paint)
+            canvas.drawArc(oval, overlapAngle + 360F * progress, 1F, false, paint)
         }
 
-        val text = "%.2f%%".format(data.filter { it > 0 }.sum() / dataSum * 100)
+        val text = "%.2f%%".format(progress * (data.filter { it > 0 }.sum() / dataSum * 100))
         textPaint.getTextBounds(
             text,
             0,
@@ -120,6 +125,25 @@ class StatsView @JvmOverloads constructor(
             center.y + textBounds.height() / 2,
             textPaint
         )
+    }
+
+    private fun update() {
+        valueAnimator?.let {
+            it.removeAllListeners()
+            it.cancel()
+        }
+        progress = 0F
+
+        valueAnimator = ValueAnimator.ofFloat(0F, 1F).apply {
+            addUpdateListener { anim ->
+                progress = anim.animatedValue as Float
+                invalidate()
+            }
+            duration = 1500
+            interpolator = DecelerateInterpolator()
+        }.also {
+            it.start()
+        }
     }
 
     private fun getRandomColor() = Random.nextInt(0xFF000000.toInt(), 0xFFFFFFFF.toInt())

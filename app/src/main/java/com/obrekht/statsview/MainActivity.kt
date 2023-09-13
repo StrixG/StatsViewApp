@@ -1,7 +1,7 @@
 package com.obrekht.statsview
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -9,9 +9,9 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         findViewById<StatsView>(R.id.stats).data = listOf(
+            1.5F,
             1F,
-            1F,
-            -1F,
+            -0.5F,
             1F
         )
     }
