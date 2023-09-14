@@ -9,7 +9,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.View
-import android.view.animation.DecelerateInterpolator
+import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.core.content.withStyledAttributes
 import kotlin.math.abs
 import kotlin.math.min
@@ -35,6 +35,8 @@ class StatsView @JvmOverloads constructor(
     private var colors = emptyList<Int>()
     private var progressBackgroundColor: Int = context.getColor(R.color.progress_background)
 
+    var animationMode: AnimationMode = AnimationMode.Parallel
+
     private var progress = 0F
     private var valueAnimator: ValueAnimator? = null
 
@@ -46,10 +48,16 @@ class StatsView @JvmOverloads constructor(
                 R.styleable.StatsView_android_progressBackgroundTint,
                 progressBackgroundColor
             )
+            animationMode = AnimationMode.values()[getInteger(
+                R.styleable.StatsView_animationType,
+                AnimationMode.Parallel.ordinal
+            )]
+
             val resId = getResourceId(R.styleable.StatsView_colors, 0)
             if (resId > 0) {
                 colors = resources.getIntArray(resId).toList()
             }
+
         }
     }
 
@@ -102,14 +110,32 @@ class StatsView @JvmOverloads constructor(
                     overlapAngle = startFrom
                 }
                 paint.color = colors.getOrNull(index) ?: getRandomColor()
-                canvas.drawArc(oval, startFrom + 360F * progress, angle * progress, false, paint)
+                when (animationMode) {
+                    AnimationMode.Parallel -> {
+                        canvas.drawArc(oval, startFrom, angle * progress, false, paint)
+                    }
+                    AnimationMode.ParallelRotation -> {
+                        canvas.drawArc(oval, startFrom + 360F * progress, angle * progress, false, paint)
+                    }
+                    AnimationMode.Sequential -> {
+                        val currentAngle = START_ANGLE + progress * 360F
+                        if (currentAngle >= startFrom) {
+                            canvas.drawArc(oval, startFrom, angle * min(1F, (currentAngle - startFrom) / angle), false, paint)
+                        }
+                    }
+                }
             }
             startFrom += angle
         }
 
         if (overlapIndex >= 0) {
             paint.color = colors.getOrNull(overlapIndex) ?: getRandomColor()
-            canvas.drawArc(oval, overlapAngle + 360F * progress, 1F, false, paint)
+            when (animationMode) {
+                AnimationMode.ParallelRotation -> {
+                    canvas.drawArc(oval, overlapAngle + 360F * progress, 1F, false, paint)
+                }
+                else -> canvas.drawArc(oval, overlapAngle, 1F, false, paint)
+            }
         }
 
         val text = "%.2f%%".format(progress * (data.filter { it > 0 }.sum() / dataSum * 100))
@@ -139,12 +165,18 @@ class StatsView @JvmOverloads constructor(
                 progress = anim.animatedValue as Float
                 invalidate()
             }
-            duration = 1500
-            interpolator = DecelerateInterpolator()
+            duration = 3000
+            interpolator = AccelerateDecelerateInterpolator()
         }.also {
             it.start()
         }
     }
 
     private fun getRandomColor() = Random.nextInt(0xFF000000.toInt(), 0xFFFFFFFF.toInt())
+
+    enum class AnimationMode {
+        Parallel,
+        ParallelRotation,
+        Sequential
+    }
 }

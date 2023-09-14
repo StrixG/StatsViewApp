@@ -11,6 +11,7 @@
         android:id="@+id/stats"
         android:layout_width="256dp"
         android:layout_height="256dp"
+        app:animationType="sequential"
         app:lineWidth="20dp"
         app:fontSize="50dp"
         app:colors="@array/colors" />
