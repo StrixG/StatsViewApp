@@ -35,6 +35,7 @@ class StatsView @JvmOverloads constructor(
     private var colors = emptyList<Int>()
     private var progressBackgroundColor: Int = context.getColor(R.color.progress_background)
 
+    var animationDuration: Int = 2000
     var animationMode: AnimationMode = AnimationMode.Parallel
 
     private var progress = 0F
@@ -48,6 +49,8 @@ class StatsView @JvmOverloads constructor(
                 R.styleable.StatsView_android_progressBackgroundTint,
                 progressBackgroundColor
             )
+            animationDuration =
+                getInteger(R.styleable.StatsView_android_animationDuration, animationDuration)
             animationMode = AnimationMode.values()[getInteger(
                 R.styleable.StatsView_animationType,
                 AnimationMode.Parallel.ordinal
@@ -114,14 +117,38 @@ class StatsView @JvmOverloads constructor(
                     AnimationMode.Parallel -> {
                         canvas.drawArc(oval, startFrom, angle * progress, false, paint)
                     }
+
                     AnimationMode.ParallelRotation -> {
-                        canvas.drawArc(oval, startFrom + 360F * progress, angle * progress, false, paint)
+                        canvas.drawArc(
+                            oval,
+                            startFrom + 360F * progress,
+                            angle * progress,
+                            false,
+                            paint
+                        )
                     }
+
                     AnimationMode.Sequential -> {
                         val currentAngle = START_ANGLE + progress * 360F
                         if (currentAngle >= startFrom) {
-                            canvas.drawArc(oval, startFrom, angle * min(1F, (currentAngle - startFrom) / angle), false, paint)
+                            canvas.drawArc(
+                                oval,
+                                startFrom,
+                                angle * min(1F, (currentAngle - startFrom) / angle),
+                                false,
+                                paint
+                            )
                         }
+                    }
+
+                    AnimationMode.Bidirectional -> {
+                        canvas.drawArc(
+                            oval,
+                            startFrom + angle / 2 * (1 - progress),
+                            angle * progress,
+                            false,
+                            paint
+                        )
                     }
                 }
             }
@@ -134,6 +161,18 @@ class StatsView @JvmOverloads constructor(
                 AnimationMode.ParallelRotation -> {
                     canvas.drawArc(oval, overlapAngle + 360F * progress, 1F, false, paint)
                 }
+
+                AnimationMode.Bidirectional -> {
+                    val angle = 360F * abs(data[overlapIndex]) / dataSum.toFloat()
+                    canvas.drawArc(
+                        oval,
+                        overlapAngle + angle / 2 * (1 - progress),
+                        1F,
+                        false,
+                        paint
+                    )
+                }
+
                 else -> canvas.drawArc(oval, overlapAngle, 1F, false, paint)
             }
         }
@@ -165,7 +204,7 @@ class StatsView @JvmOverloads constructor(
                 progress = anim.animatedValue as Float
                 invalidate()
             }
-            duration = 3000
+            duration = animationDuration.toLong()
             interpolator = AccelerateDecelerateInterpolator()
         }.also {
             it.start()
@@ -177,6 +216,7 @@ class StatsView @JvmOverloads constructor(
     enum class AnimationMode {
         Parallel,
         ParallelRotation,
-        Sequential
+        Sequential,
+        Bidirectional
     }
 }

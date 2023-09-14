@@ -9,6 +9,8 @@
             <enum name="parallel" value="0"/>
             <enum name="parallel_rotation" value="1"/>
             <enum name="sequential" value="2"/>
+            <enum name="bidirectional" value="3"/>
         </attr>
+        <attr name="android:animationDuration" format="integer" min="0" />
     </declare-styleable>
 </resources>
