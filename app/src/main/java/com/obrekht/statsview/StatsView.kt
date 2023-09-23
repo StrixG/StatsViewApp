@@ -24,6 +24,8 @@ class StatsView @JvmOverloads constructor(
     defStyleRes: Int = 0
 ) : View(context, attrs, defStyleAttr, defStyleRes) {
 
+    private val textMargin = 16.dp(context)
+
     private var radius = 0F
     private var center = PointF(0F, 0F)
     private var oval = RectF(0F, 0F, 0F, 0F)
@@ -91,6 +93,18 @@ class StatsView @JvmOverloads constructor(
         )
     }
 
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val text = formatPercentText(100.0)
+        textPaint.getTextBounds(text, 0, text.length, textBounds)
+        val desiredWidth = textBounds.width() + paddingLeft + paddingRight + lineWidth.toInt() * 2 + textMargin * 2
+        val desiredHeight = textBounds.width() + paddingTop + paddingBottom + lineWidth.toInt() * 2 + textMargin * 2
+
+        val measuredWidth = resolveSize(desiredWidth, widthMeasureSpec)
+        val measuredHeight = resolveSize(desiredHeight, heightMeasureSpec)
+
+        setMeasuredDimension(measuredWidth, measuredHeight)
+    }
+
     override fun onDraw(canvas: Canvas) {
         if (data.isEmpty()) {
             return
@@ -130,11 +144,12 @@ class StatsView @JvmOverloads constructor(
 
                     AnimationMode.Sequential -> {
                         val currentAngle = START_ANGLE + progress * 360F
+                        val angleProgress = min(1F, (currentAngle - startFrom) / angle)
                         if (currentAngle >= startFrom) {
                             canvas.drawArc(
                                 oval,
                                 startFrom,
-                                angle * min(1F, (currentAngle - startFrom) / angle),
+                                angle * angleProgress,
                                 false,
                                 paint
                             )
@@ -177,13 +192,8 @@ class StatsView @JvmOverloads constructor(
             }
         }
 
-        val text = "%.2f%%".format(progress * (data.filter { it > 0 }.sum() / dataSum * 100))
-        textPaint.getTextBounds(
-            text,
-            0,
-            text.length,
-            textBounds
-        )
+        val text = formatPercentText(progress * (data.filter { it > 0 }.sum() / dataSum * 100))
+        textPaint.getTextBounds(text, 0, text.length, textBounds)
         canvas.drawText(
             text,
             center.x,
@@ -191,6 +201,8 @@ class StatsView @JvmOverloads constructor(
             textPaint
         )
     }
+
+    private fun formatPercentText(percent: Double) = "%.2f%%".format(percent)
 
     private fun update() {
         valueAnimator?.let {
