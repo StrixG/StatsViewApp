@@ -11,7 +11,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<StatsView>(R.id.stats).data = listOf(
             1F,
             1F,
-            -1F,
+            2F,
             1F
         )
     }
